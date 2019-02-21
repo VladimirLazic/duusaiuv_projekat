@@ -1,0 +1,71 @@
+giraffe.rgb
+
+Prvih 10 vrijednosti R komponente:
+0.000000 , 
+ 0.145627 , 
+ 0.569279 , 
+ 0.379107 , 
+ 0.092039 , 
+ 0.253957 , 
+ 0.466922 , 
+ 0.285915 , 
+ 0.265013 , 
+ 0.122910 , 
+
+
+Nakon prvog conv sloja (ukljucujuci batch_normalize)
+ -0.045483 
+ -0.563436 
+ -0.727039 
+ -0.205908 
+ -0.098266 
+ -0.309534 
+ -0.316895 
+ -0.179529 
+ -0.084379 
+ -0.098638 
+
+
+MAXPOOL nad ulaznom slikom (ne posle conv sloja, nego nad giraffe.rgb) -> samo za verifikaciju maxpool layer-a.
+ 0.146818, 
+  0.569279, 
+  0.253957, 
+  0.466922, 
+  0.265013, 
+  0.330057, 
+  0.491719, 
+  0.698162, 
+  0.259952, 
+  0.195988,
+
+
+BIASES prvog konvolucionog layer-a:
+prvih 10:
+biases  start
+-2.890369, 
+-6.697667, 
+0.555269, 
+0.781719, 
+-4.420159, 
+0.983122, 
+-4.607708, 
+-9.767301, 
+-0.340466, 
+1.035211, 
+biases end
+
+
+UPSAMPLE nad ulaznom slikom (ne posle conv sloja, nego nad giraffe.rgb) -> samo za verifikaciju upsample layer-a
+prvih 10 u nizu.
+upsample start 
+0.000000, 
+0.000000, 
+0.145627, 
+0.145627, 
+0.569279, 
+0.569279, 
+0.379107, 
+0.379107, 
+0.092039, 
+0.092039, 
+upsample end 

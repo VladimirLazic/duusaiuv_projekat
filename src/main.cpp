@@ -24,8 +24,7 @@ float input_img[CHANNELS * WIDTH * HEIGHT];
 
 void readCoeff(std::string file_path, float* coeff_buffer) {
     FILE *file;
-    size_t nread;
-    
+    size_t nread;   
 
     file = fopen(file_path.c_str(), "r");
     if (file) {
@@ -45,16 +44,40 @@ void readImg(std::string file_path, float* input_img) {
     }
 }
 
-
-
 int main() {
-
     readCoeff(COEFF_FILENAME, coeff_buffer);   
     readImg(IN_FILENAME, input_img);
 
-    for(int i = 0; i < CHANNELS * WIDTH * HEIGHT; i++) {
-        std::cout << input_img[i] << std::endl;
+    // Reading coeffs for first conv layer 
+    int layer_0_filter_num = 16;
+    float biases[layer_0_filter_num];
+    float bn_weights[layer_0_filter_num];
+    float bn_running_mean[layer_0_filter_num];
+    float bn_running_var[layer_0_filter_num];
+    float conv_weight[3 * 3 * 3 * layer_0_filter_num];
+
+    int i = 5;
+    memcpy(biases, coeff_buffer + i,  layer_0_filter_num * sizeof(float));
+    i += layer_0_filter_num;
+
+    memcpy(bn_weights, coeff_buffer + i,  layer_0_filter_num * sizeof(float));
+    i += layer_0_filter_num;
+
+    memcpy(bn_running_mean, coeff_buffer + i,  layer_0_filter_num * sizeof(float));
+    i += layer_0_filter_num;
+
+    memcpy(bn_running_var, coeff_buffer + i,  layer_0_filter_num * sizeof(float));
+    i += layer_0_filter_num;
+
+    memcpy(conv_weight, coeff_buffer + i, 3 * 3 * 3 * layer_0_filter_num * sizeof(float));
+    i += 3 * 3 * 3 * layer_0_filter_num;
+
+
+    std::cout << "Biases" << std::endl;
+    for(int i = 0; i < layer_0_filter_num; i++) {
+        std::cout << biases[i] << std::endl;
     }
+    
 
     return 0;
 }

@@ -32,10 +32,8 @@ int main() {
          3 * 3 * 3 * layer_0_filter_num * sizeof(float));
   i += 3 * 3 * 3 * layer_0_filter_num;
 
-  std::cout << "Biases" << std::endl;
-  for (int i = 0; i < layer_0_filter_num; i++) {
-    std::cout << biases[i] << std::endl;
-  }
+  float padded_buffer[CHANNELS * (WIDTH + 2) * (HEIGHT + 2)];
+  image_padding(input_img, padded_buffer);
 
   return 0;
 }

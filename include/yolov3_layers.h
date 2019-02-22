@@ -31,6 +31,17 @@ typedef struct {
   bool batch_normalization = false;
 } conv_configuration;
 
+void image_padding(float *input_buffer, float *output_buffer) {
+
+  memset(output_buffer, 0,
+         CHANNELS * (WIDTH + 2) * (HEIGHT + 2) * sizeof(float));
+
+  for (int i = 0; i < HEIGHT; i++) {
+    memcpy(output_buffer + (i + 1) * (WIDTH + 2), input_buffer + i * WIDTH,
+           WIDTH * sizeof(float));
+  }
+}
+
 static void batch_normalization(float *input_buffer, float *output_buffer,
                                 conv_configuration cfg);
 

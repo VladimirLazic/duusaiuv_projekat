@@ -62,10 +62,10 @@ int main()
         new float[layer1.output_depth * 3 * layer1.output_width *
                   layer1.output_height];
 
-    // conv2d(input_img, layer1_output, layer1);
+    /*conv(input_img, layer1_output, layer1);
 
     // Testing convolution
-    /*for (int i = 0; i < 1000; i++)
+    for (int i = 0; i < 1000; i++)
     {
         std::cout << layer1_output[i] << std::endl;
     }*/
@@ -81,12 +81,34 @@ int main()
     maxpool_cfg.output_width = WIDTH / 2;
     maxpool_cfg.output_height = HEIGHT / 2;
 
-    float* output_maxpool = new float[(WIDTH * HEIGHT) / 4];
+    float* output_maxpool = new float[(CHANNELS * WIDTH * HEIGHT) / 4];
 
     maxpool(input_img, output_maxpool, maxpool_cfg);
+
+    std::cout << "MAX POOL " << std::endl;
     for (int i = 0; i < 10; i++)
     {
         std::cout << output_maxpool[i] << std::endl;
+    }
+    std::cout << "\n\n\n";
+
+    upsample_conf upsample_cfg;
+
+    upsample_cfg.stride = 2;
+
+    upsample_cfg.input_width = WIDTH;
+    upsample_cfg.input_height = HEIGHT;
+
+    upsample_cfg.output_width = WIDTH * 2;
+    upsample_cfg.output_height = HEIGHT * 2;
+
+    float* output_upsample = new float[(CHANNELS * WIDTH * HEIGHT) * 4];
+    upsample(input_img, output_upsample, upsample_cfg);
+
+    std::cout << "UPSAMPLE" << std::endl;
+    for (int i = 0; i < 10; i++)
+    {
+        std::cout << output_upsample[i] << std::endl;
     }
 
     return 0;

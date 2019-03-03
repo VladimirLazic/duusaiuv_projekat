@@ -72,59 +72,106 @@ typedef struct
     int output_height;
 } upsample_conf;
 
-void maxpool(float* input_buffer, float* output_buffer, maxpool_conf cfg)
+void maxpool(float* input, float* output, maxpool_conf cfg)
 {
-    float* temp = new float[cfg.input_width * cfg.input_height];
-
-    memset(temp, 0, cfg.input_width * cfg.input_height * sizeof(float));
-    memset(output_buffer, 0,
-           cfg.output_width * cfg.output_height * sizeof(float));
-
-    for (int i = 0; i < cfg.input_width; i += cfg.stride)
+    for (int channel = 0; channel < CHANNELS; channel++)
     {
-        for (int j = 0; j < cfg.input_height; j += cfg.stride)
+        float* input_buffer = new float[cfg.input_width * cfg.input_height];
+        memcpy(input_buffer,
+               input + channel * cfg.input_width * cfg.input_height,
+               cfg.input_width * cfg.input_height * sizeof(float));
+
+        float* temp = new float[cfg.input_width * cfg.input_height];
+
+        memset(temp, 0, cfg.input_width * cfg.input_height * sizeof(float));
+        float* output_buffer = new float[cfg.output_width * cfg.output_height];
+        memset(output_buffer, 0,
+               cfg.output_width * cfg.output_height * sizeof(float));
+
+        for (int i = 0; i < cfg.input_width; i += cfg.stride)
         {
-            float max = input_buffer[j * cfg.input_width + i];
-            for (int ii = 0; ii < cfg.size; ii++)
+            for (int j = 0; j < cfg.input_height; j += cfg.stride)
             {
-                for (int jj = 0; jj < cfg.size; jj++)
+                float max = input_buffer[j * cfg.input_width + i];
+                for (int ii = 0; ii < cfg.size; ii++)
                 {
-                    if (max <
-                        input_buffer[((j + jj) * cfg.input_width) + (i + ii)])
+                    for (int jj = 0; jj < cfg.size; jj++)
                     {
-                        max = input_buffer[((j + jj) * cfg.input_width) +
-                                           (i + ii)];
+                        if (max < input_buffer[((j + jj) * cfg.input_width) +
+                                               (i + ii)])
+                        {
+                            max = input_buffer[((j + jj) * cfg.input_width) +
+                                               (i + ii)];
+                        }
                     }
                 }
+                temp[j * cfg.input_width + i] = max;
             }
-            temp[j * cfg.input_width + i] = max;
         }
-    }
 
-    for (int i = 0; i < cfg.input_width * cfg.input_height; i++)
-    {
-        if (temp[i] == 0.0f)
+        for (int i = 0; i < cfg.input_width * cfg.input_height; i++)
         {
-            continue;
-        }
-        for (int j = 0; j < cfg.output_width * cfg.output_height; j++)
-        {
-            // If output buffer is not zero skip to next
-            if (output_buffer[j] != 0.0f)
+            if (temp[i] == 0.0f)
             {
                 continue;
             }
+            for (int j = 0; j < cfg.output_width * cfg.output_height; j++)
+            {
+                // If output buffer is not zero skip to next
+                if (output_buffer[j] != 0.0f)
+                {
+                    continue;
+                }
 
-            // std::cout << temp[i] << std::endl;
-            output_buffer[j] = temp[i];
-            break;
+                output_buffer[j] = temp[i];
+                break;
+            }
         }
-    }
 
-    delete temp;
+        delete temp;
+        memcpy(output + channel * cfg.output_width * cfg.output_height,
+               output_buffer,
+               cfg.output_width * cfg.output_height * sizeof(float));
+    }
 }
 
-void upsample(float* input_buffer, float* output_buffer, upsample_conf cfg);
+void upsample(float* input_buffer, float* output_buffer, upsample_conf cfg)
+{
+    for (int channel = 0; channel < CHANNELS; channel++)
+    {
+        float* channel_buffer = new float[cfg.input_width * cfg.input_height];
+        memcpy(channel_buffer,
+               input_buffer + channel * cfg.input_width * cfg.input_height,
+               cfg.input_width * cfg.input_height * sizeof(float));
+
+        float* channel_upsample =
+            new float[cfg.output_width * cfg.output_height];
+        memset(channel_upsample, 0,
+               cfg.output_width * cfg.output_height * sizeof(float));
+
+        // Perform upsample on single channel
+        for (int j = 0; j < cfg.input_height; j += cfg.stride)
+        {
+            float* row_upsample = new float[cfg.output_width];
+            memset(row_upsample, 0, cfg.output_width * sizeof(float));
+            int x = 0;
+            for (int i = 0; i < cfg.input_width; i++)
+            {
+                // Upsamle just the width and then copy the row stride times
+                row_upsample[x] = channel_buffer[i];
+                row_upsample[x + 1] = channel_buffer[i];
+                x += cfg.stride;
+            }
+            memcpy(channel_upsample + j * cfg.output_width, row_upsample,
+                   cfg.output_width * sizeof(float));
+            memcpy(channel_upsample + (j + 1) * cfg.output_width, row_upsample,
+                   cfg.output_width * sizeof(float));
+        }
+        memcpy(output_buffer + channel * cfg.output_width * cfg.output_height,
+               channel_upsample,
+               cfg.output_width * cfg.output_height * sizeof(float));
+    }
+}
 
 static void image_padding(float* input_buffer, float* output_buffer)
 {
@@ -157,7 +204,7 @@ static void batch_normalization(float* input_buffer, float* output_buffer,
     }
 }
 
-void conv2d(float* input_buffer, float* output_buffer, conv_configuration cfg)
+void conv(float* input_buffer, float* output_buffer, conv_configuration cfg)
 {
     int input_width = cfg.input_width;
     int input_height = cfg.input_height;

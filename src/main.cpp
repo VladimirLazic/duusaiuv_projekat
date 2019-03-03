@@ -45,7 +45,7 @@ int main()
     layer1.bn_running_var = bn_running_var;
     layer1.conv_weight = conv_weight;
 
-    layer1.batch_normalization = false;
+    layer1.batch_normalization = true;
 
     layer1.input_width = WIDTH;
     layer1.input_height = HEIGHT;
@@ -62,11 +62,31 @@ int main()
         new float[layer1.output_depth * 3 * layer1.output_width *
                   layer1.output_height];
 
-    conv2d(input_img, layer1_output, layer1);
+    // conv2d(input_img, layer1_output, layer1);
 
-    for (int i = 0; i < 1000; i++)
+    // Testing convolution
+    /*for (int i = 0; i < 1000; i++)
     {
         std::cout << layer1_output[i] << std::endl;
+    }*/
+
+    maxpool_conf maxpool_cfg;
+
+    maxpool_cfg.size = 2;
+    maxpool_cfg.stride = 2;
+
+    maxpool_cfg.input_width = WIDTH;
+    maxpool_cfg.input_height = HEIGHT;
+
+    maxpool_cfg.output_width = WIDTH / 2;
+    maxpool_cfg.output_height = HEIGHT / 2;
+
+    float* output_maxpool = new float[(WIDTH * HEIGHT) / 4];
+
+    maxpool(input_img, output_maxpool, maxpool_cfg);
+    for (int i = 0; i < 10; i++)
+    {
+        std::cout << output_maxpool[i] << std::endl;
     }
 
     return 0;

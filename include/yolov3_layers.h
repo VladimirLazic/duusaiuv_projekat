@@ -4,6 +4,7 @@
 #include <cstring>
 #include <fstream>
 #include <iostream>
+#include <math.h>
 #include <sstream>
 #include <stdlib.h> /* atof */
 #include <string>
@@ -47,6 +48,84 @@ typedef struct
 
 } conv_configuration;
 
+typedef struct
+{
+    int size;
+    int stride;
+
+    int input_width;
+    int input_height;
+
+    int output_width;
+    int output_height;
+
+} maxpool_conf;
+
+typedef struct
+{
+    int stride;
+
+    int input_width;
+    int input_height;
+
+    int output_width;
+    int output_height;
+} upsample_conf;
+
+void maxpool(float* input_buffer, float* output_buffer, maxpool_conf cfg)
+{
+    float* temp = new float[cfg.input_width * cfg.input_height];
+
+    memset(temp, 0, cfg.input_width * cfg.input_height * sizeof(float));
+    memset(output_buffer, 0,
+           cfg.output_width * cfg.output_height * sizeof(float));
+
+    for (int i = 0; i < cfg.input_width; i += cfg.stride)
+    {
+        for (int j = 0; j < cfg.input_height; j += cfg.stride)
+        {
+            float max = input_buffer[j * cfg.input_width + i];
+            for (int ii = 0; ii < cfg.size; ii++)
+            {
+                for (int jj = 0; jj < cfg.size; jj++)
+                {
+                    if (max <
+                        input_buffer[((j + jj) * cfg.input_width) + (i + ii)])
+                    {
+                        max = input_buffer[((j + jj) * cfg.input_width) +
+                                           (i + ii)];
+                    }
+                }
+            }
+            temp[j * cfg.input_width + i] = max;
+        }
+    }
+
+    for (int i = 0; i < cfg.input_width * cfg.input_height; i++)
+    {
+        if (temp[i] == 0.0f)
+        {
+            continue;
+        }
+        for (int j = 0; j < cfg.output_width * cfg.output_height; j++)
+        {
+            // If output buffer is not zero skip to next
+            if (output_buffer[j] != 0.0f)
+            {
+                continue;
+            }
+
+            // std::cout << temp[i] << std::endl;
+            output_buffer[j] = temp[i];
+            break;
+        }
+    }
+
+    delete temp;
+}
+
+void upsample(float* input_buffer, float* output_buffer, upsample_conf cfg);
+
 static void image_padding(float* input_buffer, float* output_buffer)
 {
 
@@ -60,7 +139,23 @@ static void image_padding(float* input_buffer, float* output_buffer)
 }
 
 static void batch_normalization(float* input_buffer, float* output_buffer,
-                                conv_configuration cfg);
+                                conv_configuration cfg, int layer_id)
+{
+    float batch_mean = cfg.bn_running_mean[layer_id];
+    float batch_var = cfg.bn_running_var[layer_id];
+    float batch_weigth = cfg.bn_weights[layer_id];
+
+    // NOTE: the output and input buffers have the same width and height
+    for (int i = 0; i < cfg.output_width; i++)
+    {
+        for (int j = 0; j < cfg.output_height; j++)
+        {
+            output_buffer[j * cfg.output_width + i] =
+                (input_buffer[j * cfg.output_width + i] - batch_mean) /
+                sqrt(batch_var + batch_weigth);
+        }
+    }
+}
 
 void conv2d(float* input_buffer, float* output_buffer, conv_configuration cfg)
 {
@@ -77,6 +172,7 @@ void conv2d(float* input_buffer, float* output_buffer, conv_configuration cfg)
 
     for (int i = 0; i < cfg.filter_num; i++)
     {
+        float bias = cfg.biases[i];
         float kernels[3 * 3 * 3];
         memcpy(kernels, cfg.conv_weight + i * 3 * 3 * 3,
                3 * 3 * 3 * sizeof(float));
@@ -102,7 +198,6 @@ void conv2d(float* input_buffer, float* output_buffer, conv_configuration cfg)
             float output_channel[new_image_width * new_image_height];
             memset(output_channel, 0,
                    new_image_width * new_image_height * sizeof(float));
-            // Apply kernel
 
             for (int ii = 3 / 2; ii < (input_width + 2) - 3 / 2; ++ii)
             {
@@ -122,12 +217,17 @@ void conv2d(float* input_buffer, float* output_buffer, conv_configuration cfg)
                                 kernel[(y + 3 / 2) * (input_width + 2) +
                                        (x + 3 / 2)];
 
-                            sum += data * coeff;
+                            sum += data * coeff + bias;
                         }
                     }
                     output_channel[jj * new_image_width + ii] = sum;
                 }
             }
+            if (cfg.batch_normalization)
+            {
+                batch_normalization(layer_output_buffer, output_buffer, cfg, i);
+            }
+
             // Combine the channels together
             memcpy(output_img + j * new_image_width * new_image_height,
                    output_channel,
@@ -139,15 +239,8 @@ void conv2d(float* input_buffer, float* output_buffer, conv_configuration cfg)
                3 * new_image_width * new_image_height * sizeof(float));
     }
 
-    if (cfg.batch_normalization)
-    {
-        // batch_normalization(layer_output_buffer, output_buffer, cfg);
-    }
-    else
-    {
-        memcpy(output_buffer, layer_output_buffer,
-               16 * 3 * new_image_width * new_image_height * sizeof(float));
-    }
+    memcpy(output_buffer, layer_output_buffer,
+           16 * 3 * new_image_width * new_image_height * sizeof(float));
 }
 
 void readCoeff(std::string file_path, float* coeff_buffer)

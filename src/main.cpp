@@ -62,14 +62,6 @@ int main()
         new float[layer1.output_depth * 3 * layer1.output_width *
                   layer1.output_height];
 
-    /*conv(input_img, layer1_output, layer1);
-
-    // Testing convolution
-    for (int i = 0; i < 1000; i++)
-    {
-        std::cout << layer1_output[i] << std::endl;
-    }*/
-
     maxpool_conf maxpool_cfg;
 
     maxpool_cfg.size = 2;
@@ -85,7 +77,7 @@ int main()
 
     maxpool(input_img, output_maxpool, maxpool_cfg);
 
-    std::cout << "MAX POOL " << std::endl;
+    std::cout << "MAXPOOL " << std::endl;
     for (int i = 0; i < 10; i++)
     {
         std::cout << output_maxpool[i] << std::endl;
@@ -103,12 +95,22 @@ int main()
     upsample_cfg.output_height = HEIGHT * 2;
 
     float* output_upsample = new float[(CHANNELS * WIDTH * HEIGHT) * 4];
+
     upsample(input_img, output_upsample, upsample_cfg);
 
     std::cout << "UPSAMPLE" << std::endl;
     for (int i = 0; i < 10; i++)
     {
         std::cout << output_upsample[i] << std::endl;
+    }
+    std::cout << "\n\n\n";
+
+    conv(input_img, layer1_output, layer1);
+
+    std::cout << "CONVOLUTION" << std::endl;
+    for (int i = 0; i < 10; i++)
+    {
+        std::cout << layer1_output[i] << std::endl;
     }
 
     return 0;

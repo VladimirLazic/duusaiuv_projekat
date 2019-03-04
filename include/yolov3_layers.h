@@ -175,33 +175,25 @@ void upsample(float* input_buffer, float* output_buffer, upsample_conf cfg)
 
 static void image_padding(float* input_buffer, float* output_buffer)
 {
-
     memset(output_buffer, 0, (WIDTH + 2) * (HEIGHT + 2) * sizeof(float));
 
-    for (int i = 0; i < HEIGHT; i++)
+    for (int i = 1; i < HEIGHT; i++)
     {
         memcpy(output_buffer + (i + 1) * (WIDTH + 2), input_buffer + i * WIDTH,
                WIDTH * sizeof(float));
     }
 }
 
-static void batch_normalization(float* input_buffer, float* output_buffer,
+static void batch_normalization(float* input_val, float* output_val,
                                 conv_configuration cfg, int layer_id)
 {
     float batch_mean = cfg.bn_running_mean[layer_id];
     float batch_var = cfg.bn_running_var[layer_id];
     float batch_weigth = cfg.bn_weights[layer_id];
+    float epsilon = 0.000001f;
 
-    // NOTE: the output and input buffers have the same width and height
-    for (int i = 0; i < cfg.output_width; i++)
-    {
-        for (int j = 0; j < cfg.output_height; j++)
-        {
-            output_buffer[j * cfg.output_width + i] =
-                (input_buffer[j * cfg.output_width + i] - batch_mean) /
-                sqrt(batch_var + batch_weigth);
-        }
-    }
+    *output_val = (*input_val - batch_mean) / sqrt(batch_var + epsilon);
+    *output_val += batch_weigth;
 }
 
 void conv(float* input_buffer, float* output_buffer, conv_configuration cfg)
@@ -246,33 +238,34 @@ void conv(float* input_buffer, float* output_buffer, conv_configuration cfg)
             memset(output_channel, 0,
                    new_image_width * new_image_height * sizeof(float));
 
-            for (int ii = 3 / 2; ii < (input_width + 2) - 3 / 2; ++ii)
+            for (int ii = 0; ii < (input_width + 2); ii++)
             {
-                for (int jj = 3 / 2; jj < (input_height + 2) - 3 / 2; ++jj)
+                for (int jj = 0; jj < (input_height + 2); jj++)
                 {
                     float sum = 0;
 
-                    for (int x = -3 / 2; x <= 3 / 2; ++x)
+                    for (int x = ii; x < ii + 3; x++)
                     {
-                        for (int y = -3 / 2; y <= 3 / 2; ++y)
+                        for (int y = jj; y < jj + 3; y++)
                         {
                             float data =
-                                padded_channel[(jj + y) * (input_width + 2) +
-                                               (ii + x)];
+                                padded_channel[(jj) * (input_width + 2) + (ii)];
 
-                            float coeff =
-                                kernel[(y + 3 / 2) * (input_width + 2) +
-                                       (x + 3 / 2)];
+                            float coeff = kernel[(y - jj) * 3 + (x - ii)];
 
-                            sum += data * coeff + bias;
+                            sum += data * coeff;
+                            if (cfg.batch_normalization)
+                            {
+                                batch_normalization(&sum, &sum, cfg, i);
+                            }
+                            else
+                            {
+                                sum += bias;
+                            }
                         }
                     }
                     output_channel[jj * new_image_width + ii] = sum;
                 }
-            }
-            if (cfg.batch_normalization)
-            {
-                batch_normalization(layer_output_buffer, output_buffer, cfg, i);
             }
 
             // Combine the channels together
